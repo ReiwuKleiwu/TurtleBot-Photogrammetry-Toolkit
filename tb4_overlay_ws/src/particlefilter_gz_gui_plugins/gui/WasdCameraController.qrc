@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/WasdCameraController">
+    <file>WasdCameraController.qml</file>
+  </qresource>
+</RCC>
