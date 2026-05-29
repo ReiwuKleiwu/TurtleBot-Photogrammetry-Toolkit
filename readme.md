@@ -333,9 +333,9 @@ colmap point_triangulator \
   --output_path "$COLMAP_OUT/sparse/0"
 ```
 
-5. Convert the sparse model to binary COLMAP files if your 3DGS implementation expects them.
+5. Convert the sparse model to binary COLMAP files.
 
-Many 3DGS loaders expect the standard COLMAP binary files under `sparse/0`.
+`point_triangulator` may write a text or binary model depending on COLMAP version/settings. This command ensures the intermediate model contains `cameras.bin`, `images.bin`, and `points3D.bin`.
 
 ```bash
 colmap model_converter \
@@ -344,13 +344,30 @@ colmap model_converter \
   --output_type BIN
 ```
 
-The resulting dataset for 3DGS is:
+6. Create the flat Brush/3DGS output folder.
+
+Brush expects the images and COLMAP `.bin` files on the same directory level, not nested under `sparse/0`.
+
+```bash
+BRUSH_OUT="$RUN/brush_output"
+mkdir -p "$BRUSH_OUT"
+
+cp -a "$IMG"/* "$BRUSH_OUT"/
+cp -a "$COLMAP_OUT/sparse/0/cameras.bin" "$BRUSH_OUT"/
+cp -a "$COLMAP_OUT/sparse/0/images.bin" "$BRUSH_OUT"/
+cp -a "$COLMAP_OUT/sparse/0/points3D.bin" "$BRUSH_OUT"/
+```
+
+The resulting Brush/3DGS folder is:
 
 ```text
-data/my_world/screenshots/images/
-data/my_world/colmap/sparse/0/cameras.bin
-data/my_world/colmap/sparse/0/images.bin
-data/my_world/colmap/sparse/0/points3D.bin
+data/my_world/brush_output/
+  00000.png
+  00001.png
+  ...
+  cameras.bin
+  images.bin
+  points3D.bin
 ```
 
 Optionally export a PLY point cloud for inspection:
@@ -358,7 +375,7 @@ Optionally export a PLY point cloud for inspection:
 ```bash
 colmap model_converter \
   --input_path "$COLMAP_OUT/sparse/0" \
-  --output_path "$COLMAP_OUT/sparse/points3D.ply" \
+  --output_path "$BRUSH_OUT/points3D.ply" \
   --output_type PLY
 ```
 
