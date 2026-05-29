@@ -1,6 +1,16 @@
 # TurtleBot Gazebo Camera Tools
 
-Portable helper repository for launching TurtleBot 4 Gazebo worlds and recording/replaying Gazebo GUI camera poses. The bundled defaults target the included small-house world, but the launch scripts can run other worlds and maps through command-line options or config overrides.
+This repository contains a small, portable toolchain for working with TurtleBot 4 simulations in Gazebo when you need repeatable GUI-camera screenshots from manually chosen viewpoints. It is meant for workflows where you fly through a simulated world, save the Gazebo GUI camera poses you care about, and later replay those exact poses to generate a consistent image dataset with pose metadata.
+
+The repo provides:
+
+- launch scripts for starting TurtleBot 4 Gazebo worlds with or without the custom WASD GUI-camera controller
+- a ROS/Gazebo overlay containing the WASD camera plugin and bundled TurtleBot 4 world/model assets
+- a waypoint recorder that saves the current Gazebo GUI camera pose to JSON
+- a screenshot replay tool that moves the GUI camera back to recorded poses and writes PNG images, `poses.csv`, and `transforms.json`
+- config files and examples for keeping local paths, maps, worlds, and GUI settings out of the scripts
+
+The bundled defaults target the included small-house world, but the scripts are intentionally parameterized so other Gazebo worlds, model folders, and Nav2 maps can be used by changing config values or passing command-line options.
 
 ## Contents
 
@@ -9,7 +19,7 @@ assets/maps/                         Nav2/localization maps
 config/project.env.example           Example local path/config overrides
 scripts/build_overlay.sh             Builds the ROS/Gazebo overlay
 scripts/run_turtlebot_world.sh        Launches TurtleBot simulation
-scripts/run_wasd_world.sh       Launches Gazebo with WASD GUI camera plugin
+scripts/run_wasd_world.sh            Launches Gazebo with WASD GUI camera plugin
 scripts/record_gui_camera_waypoints.py
 scripts/capture_gui_camera_survey.py
 tb4_overlay_ws/src/                  Overlay source packages, worlds, models, GUI plugin
