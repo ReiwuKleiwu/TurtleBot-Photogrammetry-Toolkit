@@ -39,6 +39,8 @@ ARGUMENTS = [
     DeclareLaunchArgument('model', default_value='standard',
                           choices=['standard', 'lite'],
                           description='Turtlebot4 Model'),
+    DeclareLaunchArgument('gui_config', default_value='',
+                          description='Optional full path to a Gazebo GUI config.'),
 ]
 
 for pose_element in ['x', 'y', 'z', 'yaw']:
@@ -60,7 +62,9 @@ def generate_launch_description():
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([gazebo_launch]),
         launch_arguments=[
-            ('world', LaunchConfiguration('world'))
+            ('world', LaunchConfiguration('world')),
+            ('model', LaunchConfiguration('model')),
+            ('gui_config', LaunchConfiguration('gui_config'))
         ]
     )
 

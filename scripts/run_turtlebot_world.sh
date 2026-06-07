@@ -14,15 +14,17 @@ ROBOT_X="-3.5"
 ROBOT_Y="-4.5"
 ROBOT_Z="0.35"
 ROBOT_YAW="1.57"
+GUI_CONFIG_OVERRIDE=""
 
 usage() {
-  cat <<'EOF'
+  cat <<'EOF_USAGE'
 Usage: run_turtlebot_world.sh [options]
 
 Options:
   --world NAME          Gazebo world name passed to turtlebot4_gz.launch.py.
                         Example: small_house, warehouse, depot
   --map PATH            Nav2/localization map yaml. Relative paths resolve from repo root.
+  --gui-config PATH     Gazebo GUI config. Relative paths resolve from repo root.
   --rviz true|false
   --localization true|false
   --nav2 true|false
@@ -31,13 +33,14 @@ Options:
   --z VALUE
   --yaw VALUE
   -h, --help
-EOF
+EOF_USAGE
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --world) WORLD_NAME="$2"; shift 2 ;;
     --map) MAP_YAML="$(resolve_project_path "$2")"; shift 2 ;;
+    --gui-config) GUI_CONFIG_OVERRIDE="$(resolve_project_path "$2")"; shift 2 ;;
     --rviz) RVIZ="$2"; shift 2 ;;
     --localization) LOCALIZATION="$2"; shift 2 ;;
     --nav2) NAV2="$2"; shift 2 ;;
@@ -58,6 +61,9 @@ require_file "${ROS_SETUP}" "ROS setup file"
 require_file "${OVERLAY_SETUP}" "overlay setup file; run scripts/build_overlay.sh first"
 if [[ "${LOCALIZATION}" == "true" || "${NAV2}" == "true" ]]; then
   require_file "${MAP_YAML}" "map yaml"
+fi
+if [[ -n "${GUI_CONFIG_OVERRIDE}" ]]; then
+  require_file "${GUI_CONFIG_OVERRIDE}" "Gazebo GUI config"
 fi
 
 # Clean up the full launch stack, not just Gazebo itself. A crash can leave
@@ -100,13 +106,22 @@ export GZ_SIM_RESOURCE_PATH="${MODEL_PATH}"
 cleanup_processes
 CLEANUP_DONE=0
 
-ros2 launch turtlebot4_gz_bringup turtlebot4_gz.launch.py \
-  world:="${WORLD_NAME}" \
-  rviz:="${RVIZ}" \
-  localization:="${LOCALIZATION}" \
-  nav2:="${NAV2}" \
-  map:="${MAP_YAML}" \
-  x:="${ROBOT_X}" y:="${ROBOT_Y}" z:="${ROBOT_Z}" yaw:="${ROBOT_YAW}" &
+launch_args=(
+  world:="${WORLD_NAME}"
+  rviz:="${RVIZ}"
+  localization:="${LOCALIZATION}"
+  nav2:="${NAV2}"
+  map:="${MAP_YAML}"
+  x:="${ROBOT_X}"
+  y:="${ROBOT_Y}"
+  z:="${ROBOT_Z}"
+  yaw:="${ROBOT_YAW}"
+)
+if [[ -n "${GUI_CONFIG_OVERRIDE}" ]]; then
+  launch_args+=(gui_config:="${GUI_CONFIG_OVERRIDE}")
+fi
+
+ros2 launch turtlebot4_gz_bringup turtlebot4_gz.launch.py "${launch_args[@]}" &
 LAUNCH_PID=$!
 
 set +e

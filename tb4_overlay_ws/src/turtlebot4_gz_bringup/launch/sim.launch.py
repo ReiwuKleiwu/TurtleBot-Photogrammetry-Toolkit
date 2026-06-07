@@ -23,8 +23,9 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -37,6 +38,8 @@ ARGUMENTS = [
     DeclareLaunchArgument('model', default_value='lite',
                           choices=['standard', 'lite'],
                           description='Turtlebot4 Model'),
+    DeclareLaunchArgument('gui_config', default_value='',
+                          description='Optional full path to a Gazebo GUI config.'),
 ]
 
 
@@ -90,24 +93,42 @@ def generate_launch_description():
     # Paths
     gz_sim_launch = PathJoinSubstitution(
         [pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py'])
+    default_gui_config = PathJoinSubstitution([
+        pkg_turtlebot4_gz_bringup,
+        'gui',
+        LaunchConfiguration('model'),
+        'gui.config'
+    ])
 
     # Gazebo harmonic
-    gazebo = IncludeLaunchDescription(
+    default_gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([gz_sim_launch]),
+        condition=IfCondition(PythonExpression(["'", LaunchConfiguration('gui_config'), "' == ''"])),
         launch_arguments=[
             ('gz_args', [
                 LaunchConfiguration('world'),
                 '.sdf',
                 ' -r',
                 ' -v 4',
-		' --render-engine ogre2 ',
+                ' --render-engine ogre2 ',
                 ' --gui-config ',
-                PathJoinSubstitution([
-                    pkg_turtlebot4_gz_bringup,
-                    'gui',
-                    LaunchConfiguration('model'),
-                    'gui.config'
-                ])
+                default_gui_config
+            ])
+        ]
+    )
+
+    custom_gazebo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([gz_sim_launch]),
+        condition=IfCondition(PythonExpression(["'", LaunchConfiguration('gui_config'), "' != ''"])),
+        launch_arguments=[
+            ('gz_args', [
+                LaunchConfiguration('world'),
+                '.sdf',
+                ' -r',
+                ' -v 4',
+                ' --render-engine ogre2 ',
+                ' --gui-config ',
+                LaunchConfiguration('gui_config')
             ])
         ]
     )
@@ -124,6 +145,7 @@ def generate_launch_description():
     ld = LaunchDescription(ARGUMENTS)
     ld.add_action(gz_resource_path)
     ld.add_action(gz_gui_plugin_path)
-    ld.add_action(gazebo)
+    ld.add_action(default_gazebo)
+    ld.add_action(custom_gazebo)
     ld.add_action(clock_bridge)
     return ld
