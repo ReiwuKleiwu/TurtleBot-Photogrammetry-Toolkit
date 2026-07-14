@@ -404,7 +404,34 @@ python3 scripts/capture_physical_turtlebot_survey.py \
 
 Type `c` then `Enter` to capture a frame. Type `q` then `Enter` to finish. If AMCL is not active, use `--target-frame odom` instead of `map`. The small `--tf-lookup-offset-sec` compensates for camera timestamps that can run a few milliseconds ahead of the latest TF sample.
 
-Generated photogrammetry waypoint CSV files can be edited on top of the PGM map before driving the robot:
+Generate an offline photogrammetry waypoint path from a ROS map:
+
+```bash
+python3 scripts/generate_photogrammetry_path.py \
+  --map-yaml /home/student/texttoturtle/DLML_TextToTurtleBot/cps_labor_map.yaml \
+  --output-json data/path_plans/cps_labor_region_lawnmower.json \
+  --output-csv data/path_plans/cps_labor_region_lawnmower.csv \
+  --overlay-png data/path_plans/cps_labor_region_lawnmower_overlay.png \
+  --path-mode lawnmower \
+  --spacing-m 0.45 \
+  --clearance-m 0.35 \
+  --border-m 0.15 \
+  --yaw-mode wall
+```
+
+Use `--path-mode sampled` for a sampled free-space path, or `--path-mode lawnmower` for structured scanlines. With `--restrict-to-start-component`, the generator discards disconnected free-space regions that cannot be reached from the chosen `--start-x/--start-y` point.
+
+Render a high-resolution overlay for an existing waypoint CSV:
+
+```bash
+python3 scripts/render_photogrammetry_path_overlay.py \
+  --map-yaml /home/student/texttoturtle/DLML_TextToTurtleBot/cps_labor_map.yaml \
+  --path-csv data/path_plans/cps_labor_region_lawnmower.csv \
+  --overlay-png data/path_plans/cps_labor_region_lawnmower_overlay.png \
+  --scale 4
+```
+
+Generated photogrammetry waypoint CSV files can also be edited on top of the PGM map before driving the robot:
 
 ```bash
 python3 scripts/edit_photogrammetry_path_gui.py \
