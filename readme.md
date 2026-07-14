@@ -23,6 +23,7 @@ The bundled defaults target the included small-house world, but the scripts are 
 - [Capture Screenshots From Recorded Poses](#capture-screenshots-from-recorded-poses)
 - [Export Known Poses For COLMAP](#export-known-poses-for-colmap)
 - [COLMAP Pipeline For 3DGS](#colmap-pipeline-for-3dgs)
+- [Physical TurtleBot OAK-D Capture](#physical-turtlebot-oak-d-capture)
 - [Use Another Gazebo World](#use-another-gazebo-world)
 - [Add A New World](#add-a-new-world)
 - [Use Another Nav2 Map](#use-another-nav2-map)
@@ -378,6 +379,85 @@ colmap model_converter \
   --output_path "$BRUSH_OUT/points3D.ply" \
   --output_type PLY
 ```
+
+## Physical TurtleBot OAK-D Capture
+
+For a physical TurtleBot 4, the recorder captures the robot's OAK-D RGB stream and looks up the camera pose from TF at the image timestamp. It writes the same kind of run folder as the Gazebo workflow, but the pose convention is different: poses are `oakd_rgb_camera_optical_frame` in a ROS target frame such as `map` or `odom`.
+
+Run it on the robot or on a machine that can receive the robot's ROS topics:
+
+```bash
+python3 scripts/capture_physical_turtlebot_survey.py \
+  --image-topic /robot_1/oakd/rgb/image_raw \
+  --camera-info-topic /robot_1/oakd/rgb/camera_info \
+  --target-frame map \
+  --camera-frame oakd_rgb_camera_optical_frame \
+  --images-dir data/robot_1_run/screenshots/images \
+  --poses-csv data/robot_1_run/screenshots/poses.csv \
+  --transforms-json data/robot_1_run/screenshots/transforms.json \
+  --camera-info-json data/robot_1_run/screenshots/camera_info.json \
+  --tf-lookup-offset-sec 0.05 \
+  --ros-args -r /tf:=/robot_1/tf -r /tf_static:=/robot_1/tf_static
+```
+
+Type `c` then `Enter` to capture a frame. Type `q` then `Enter` to finish. If AMCL is not active, use `--target-frame odom` instead of `map`. The small `--tf-lookup-offset-sec` compensates for camera timestamps that can run a few milliseconds ahead of the latest TF sample.
+
+Generated photogrammetry waypoint CSV files can be edited on top of the PGM map before driving the robot:
+
+```bash
+python3 scripts/edit_photogrammetry_path_gui.py \
+  --map-yaml /home/student/texttoturtle/DLML_TextToTurtleBot/cps_labor_map.yaml \
+  --path-csv data/path_plans/cps_labor_lawnmower_y_component.csv \
+  --output-csv data/path_plans/cps_labor_lawnmower_y_component_edited.csv
+```
+
+Drag points to move them, select a point and press `Delete` to remove it, enable `Add on click` to insert points, and use `Yaw +/-15` to adjust heading.
+
+The same GUI can also create a new region-limited lawnmower path from an empty map:
+
+```bash
+python3 scripts/edit_photogrammetry_path_gui.py \
+  --map-yaml /home/student/texttoturtle/DLML_TextToTurtleBot/cps_labor_map.yaml \
+  --output-csv data/path_plans/cps_labor_region_lawnmower.csv
+```
+
+Click `Select Region`, drag a rectangle inside the room, click `Set Start`, click the start point inside that rectangle, choose grid and clearance values, then click `Generate In Region`.
+
+Export the physical capture to a COLMAP text model:
+
+```bash
+python3 scripts/export_colmap_physical_poses.py \
+  --poses-csv data/robot_1_run/screenshots/poses.csv \
+  --images-dir data/robot_1_run/screenshots/images \
+  --camera-info-json data/robot_1_run/screenshots/camera_info.json \
+  --output-dir data/robot_1_run/colmap_known \
+  --camera-model PINHOLE
+```
+
+The physical exporter assumes the saved pose is already a ROS optical camera pose. ROS optical camera coordinates match COLMAP camera coordinates: x right, y down, z forward. For distorted raw OAK-D images, either rectify images before export and use `PINHOLE`, or export with a distortion-capable COLMAP model such as `OPENCV` or `FULL_OPENCV`.
+
+To let Nav2 drive a generated path and capture automatically at each waypoint:
+
+```bash
+python3 scripts/run_nav2_photogrammetry_capture.py \
+  --waypoints-csv data/path_plans/cps_labor_region_lawnmower.csv \
+  --navigate-action /robot_2/navigate_to_pose \
+  --image-topic /robot_2/oakd/rgb/image_raw \
+  --camera-info-topic /robot_2/oakd/rgb/camera_info \
+  --target-frame map \
+  --camera-frame oakd_rgb_camera_optical_frame \
+  --images-dir data/robot_2_auto_run/screenshots/images \
+  --poses-csv data/robot_2_auto_run/screenshots/poses.csv \
+  --transforms-json data/robot_2_auto_run/screenshots/transforms.json \
+  --camera-info-json data/robot_2_auto_run/screenshots/camera_info.json \
+  --progress-json data/robot_2_auto_run/progress.json \
+  --settle-sec 1.0 \
+  --nav-retries 3 \
+  --tf-lookup-offset-sec 0.02 \
+  --ros-args -r /tf:=/robot_2/tf -r /tf_static:=/robot_2/tf_static
+```
+
+The runner writes progress after every waypoint and resumes from `progress.json` by default. If Nav2 fails repeatedly, the script asks whether to retry the same waypoint, skip it, or stop.
 
 ## Use Another Gazebo World
 
